@@ -1,7 +1,7 @@
 <template>
   <el-container>
-    <task-sidebar></task-sidebar>
-    <el-main>
+    <task-sidebar v-if="isDialog !== true"></task-sidebar>
+    <el-main :style="{ height: isDialog ? 'auto' : '' }">
       <el-form :inline="true" >
         <el-form-item label="任务ID">
           <el-input v-model.trim="searchParams.task_id"></el-input>
@@ -156,6 +156,10 @@ import taskLogService from '../../api/taskLog'
 
 export default {
   name: 'task-log',
+  props: {
+    taskId: String,
+    isDialog: Boolean
+  },
   data () {
     return {
       logs: [],
@@ -205,8 +209,9 @@ export default {
   },
   components: {taskSidebar},
   created () {
-    if (this.$route.query.task_id) {
-      this.searchParams.task_id = this.$route.query.task_id
+    const taskId = this.taskId || this.$route.query.task_id
+    if (taskId) {
+      this.searchParams.task_id = taskId
     }
     this.search()
   },

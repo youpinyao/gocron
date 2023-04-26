@@ -1,7 +1,7 @@
 <template>
   <el-container >
-    <task-sidebar></task-sidebar>
-    <el-main>
+    <task-sidebar v-if="isDialog !== true"></task-sidebar>
+    <el-main :style="{ height: isDialog ? 'auto' : '' }">
       <el-form ref="form" :model="form" :rules="formRules" label-width="180px">
         <el-input v-model="form.id" type="hidden"></el-input>
         <el-row>
@@ -260,6 +260,10 @@ import notificationService from '../../api/notification'
 
 export default {
   name: 'task-edit',
+  props: {
+    isDialog: Boolean,
+    id: String
+  },
   data () {
     return {
       form: {
@@ -408,73 +412,76 @@ export default {
   },
   components: {taskSidebar},
   created () {
-    const id = this.$route.params.id
+    const id = this.isDialog ? this.id : this.$route.params.id
 
-    taskService.detail(id, (taskData, hosts) => {
-      if (id && !taskData) {
-        this.$message.error('数据不存在')
-        this.cancel()
-        return
-      }
-      this.hosts = hosts || []
-      if (!taskData) {
-        return
-      }
-      this.form.id = taskData.id
-      this.form.name = taskData.name
-      this.form.tag = taskData.tag
-      this.form.level = taskData.level
-      if (taskData.dependency_status) {
-        this.form.dependency_status = taskData.dependency_status
-      }
-      this.form.dependency_task_id = taskData.dependency_task_id
-      this.form.spec = taskData.spec
-      this.form.protocol = taskData.protocol
-      if (taskData.http_method) {
-        this.form.http_method = taskData.http_method
-      }
-      this.form.command = taskData.command
-      this.form.timeout = taskData.timeout
-      this.form.multi = taskData.multi ? 1 : 2
-      this.form.notify_keyword = taskData.notify_keyword
-      this.form.notify_status = taskData.notify_status + 1
-      this.form.notify_receiver_id = taskData.notify_receiver_id
-      if (taskData.notify_type) {
-        this.form.notify_type = taskData.notify_type + 1
-      }
-      this.form.retry_times = taskData.retry_times
-      this.form.retry_interval = taskData.retry_interval
-      this.form.remark = taskData.remark
-      taskData.hosts = taskData.hosts || []
-      if (this.form.protocol === 2) {
-        taskData.hosts.forEach((v) => {
-          this.selectedHosts.push(v.host_id)
-        })
-      }
-
-      if (this.form.notify_status > 1) {
-        const notifyReceiverIds = this.form.notify_receiver_id.split(',')
-        if (this.form.notify_type === 2) {
-          notifyReceiverIds.forEach((v) => {
-            this.selectedMailNotifyIds.push(parseInt(v))
-          })
-        } else if (this.form.notify_type === 3) {
-          notifyReceiverIds.forEach((v) => {
-            this.selectedSlackNotifyIds.push(parseInt(v))
-          })
-        }
-      }
-    })
-
-    notificationService.mail((data) => {
-      this.mailUsers = data.mail_users
-    })
-
-    notificationService.slack((data) => {
-      this.slackChannels = data.channels
-    })
+    this.query(id)
   },
   methods: {
+    query (id) {
+      taskService.detail(id, (taskData, hosts) => {
+        if (id && !taskData) {
+          this.$message.error('数据不存在')
+          this.cancel()
+          return
+        }
+        this.hosts = hosts || []
+        if (!taskData) {
+          return
+        }
+        this.form.id = taskData.id
+        this.form.name = taskData.name
+        this.form.tag = taskData.tag
+        this.form.level = taskData.level
+        if (taskData.dependency_status) {
+          this.form.dependency_status = taskData.dependency_status
+        }
+        this.form.dependency_task_id = taskData.dependency_task_id
+        this.form.spec = taskData.spec
+        this.form.protocol = taskData.protocol
+        if (taskData.http_method) {
+          this.form.http_method = taskData.http_method
+        }
+        this.form.command = taskData.command
+        this.form.timeout = taskData.timeout
+        this.form.multi = taskData.multi ? 1 : 2
+        this.form.notify_keyword = taskData.notify_keyword
+        this.form.notify_status = taskData.notify_status + 1
+        this.form.notify_receiver_id = taskData.notify_receiver_id
+        if (taskData.notify_type) {
+          this.form.notify_type = taskData.notify_type + 1
+        }
+        this.form.retry_times = taskData.retry_times
+        this.form.retry_interval = taskData.retry_interval
+        this.form.remark = taskData.remark
+        taskData.hosts = taskData.hosts || []
+        if (this.form.protocol === 2) {
+          taskData.hosts.forEach((v) => {
+            this.selectedHosts.push(v.host_id)
+          })
+        }
+
+        if (this.form.notify_status > 1) {
+          const notifyReceiverIds = this.form.notify_receiver_id.split(',')
+          if (this.form.notify_type === 2) {
+            notifyReceiverIds.forEach((v) => {
+              this.selectedMailNotifyIds.push(parseInt(v))
+            })
+          } else if (this.form.notify_type === 3) {
+            notifyReceiverIds.forEach((v) => {
+              this.selectedSlackNotifyIds.push(parseInt(v))
+            })
+          }
+        }
+      })
+
+      notificationService.mail((data) => {
+        this.mailUsers = data.mail_users
+      })
+
+      notificationService.slack((data) => {
+        this.slackChannels = data.channels
+      })
+    },
     submit () {
       this.$refs['form'].validate((valid) => {
         if (!valid) {
@@ -509,11 +516,19 @@ export default {
         this.form.notify_receiver_id = this.selectedSlackNotifyIds.join(',')
       }
       taskService.update(this.form, () => {
-        this.$router.push('/task')
+        if (this.isDialog) {
+          this.$emit('save')
+        } else {
+          this.$router.push('/task')
+        }
       })
     },
     cancel () {
-      this.$router.push('/task')
+      if (this.isDialog) {
+        this.$emit('cancel')
+      } else {
+        this.$router.push('/task')
+      }
     }
   }
 }

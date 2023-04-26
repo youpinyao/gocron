@@ -181,11 +181,29 @@
       </el-table-column>
     </el-table>
   </el-main>
+  <el-dialog width="80%" :visible.sync="visibleTaskEditDialog">
+    <task-edit
+      v-if="visibleTaskEditDialog"
+      :isDialog="true"
+      @cancel="visibleTaskEditDialog = false"
+      @save="visibleTaskEditDialog = false; this.search()"
+      :id="editId"
+    />
+  </el-dialog>
+  <el-dialog width="80%" :visible.sync="visibleTaskLogDialog">
+    <task-log
+      v-if="visibleTaskLogDialog"
+      :taskId="taskId"
+      :isDialog="true"
+    />
+  </el-dialog>
 </el-container>
 </template>
 
 <script>
 import taskSidebar from './sidebar'
+import taskEdit from './edit'
+import taskLog from '../taskLog/list'
 import taskService from '../../api/task'
 
 export default {
@@ -225,10 +243,14 @@ export default {
           value: '1',
           label: '停止'
         }
-      ]
+      ],
+      editId: undefined,
+      taskId: undefined,
+      visibleTaskEditDialog: false,
+      visibleTaskLogDialog: false
     }
   },
-  components: {taskSidebar},
+  components: { taskSidebar, taskEdit, taskLog },
   created () {
     const hostId = this.$route.query.host_id
     if (hostId) {
@@ -313,7 +335,9 @@ export default {
       })
     },
     jumpToLog (item) {
-      this.$router.push(`/task/log?task_id=${item.id}`)
+      this.visibleTaskLogDialog = true
+      this.taskId = item.id + ''
+      // this.$router.push(`/task/log?task_id=${item.id}`)
     },
     refresh () {
       this.search(() => {
@@ -321,13 +345,17 @@ export default {
       })
     },
     toEdit (item) {
-      let path = ''
+      // let path = ''
       if (item === null) {
-        path = '/task/create'
+        this.editId = undefined
+        this.visibleTaskEditDialog = true
+        // path = '/task/create'
       } else {
-        path = `/task/edit/${item.id}`
+        this.editId = item.id + ''
+        this.visibleTaskEditDialog = true
+        // path = `/task/edit/${item.id}`
       }
-      this.$router.push(path)
+      // this.$router.push(path)
     }
   }
 }
